@@ -1,0 +1,19 @@
+[presets]
+source_dir = /Gary/bvz
+skip_source_sub_dirs = False
+source_dirs_to_skip = ["/user/bvz/preferences", "/bob"]
+target_dir = /Applications
+skip_target_sub_dirs = False
+target_dirs_to_skip = /Applications/bob
+log_file = /Users/bvz/compareFiles.duplicates
+overwrite_log = True
+limit_to_patterns = False
+pattern_list = jpg, tif
+skip_zero_len = True
+skip_hidden = True
+skip_dsstore = True
+skip_links = True
+follow_links = False
+many_dupes = True
+do_debug = False
+debug_limit = 1000

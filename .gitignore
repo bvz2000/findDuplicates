@@ -1,0 +1,6 @@
+*.py[cod]
+.idea
+
+# Scratch files for when I am refactoring
+parking*
+
