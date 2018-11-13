@@ -5,6 +5,7 @@ import sys
 import lib
 
 
+# TODO: Add an integer type
 # ==============================================================================
 class UI(object):
     """
@@ -41,7 +42,8 @@ class UI(object):
     def wrap_text(msg, max_width=80):
         """
         Wraps text to match the maxWidth (i.e. it will split on a space, but be
-        no longer than max_width)
+        no longer than max_width). Respects existing newline characters,
+        including the literal string: \n
 
         :param msg: The message to split
         :param max_width: The maximum number of characters. Defaults to 80
@@ -110,7 +112,7 @@ class UI(object):
         desc = self.resources_obj.get(self.section, "description")
         desc = self.wrap_text(desc, 90) + "\n"
 
-        return self.wrap_text(lib.format_string(desc))
+        return lib.format_string(desc)
 
     # --------------------------------------------------------------------------
     def get_instruction(self):
@@ -125,7 +127,7 @@ class UI(object):
         instruction = self.wrap_text(instruction, 90)
         instruction += "\n"
 
-        return self.wrap_text(lib.format_string(instruction))
+        return lib.format_string(instruction)
 
     # --------------------------------------------------------------------------
     def get_prompt(self):
@@ -443,7 +445,7 @@ class FileInUI(UI):
         file_does_not_exist = self.resources_obj.get("errors",
                                                      "file_does_not_exist")
         file_is_dir = self.resources_obj.get("errors", "file_is_dir")
-        not_sub_dir = self.resources_obj.get("errors", "not_sub_dir")
+        # not_sub_dir = self.resources_obj.get("errors", "not_sub_dir")
 
         # Check to see if the path exists
         if not os.path.exists(response) or response == "":
@@ -530,13 +532,15 @@ class FileOutUI(UI):
         :return: True if it passes validation, False otherwise.
         """
 
-        error_prefix = self.resources_obj.get("errors", "prefix")
-        dir_does_not_exist = self.resources_obj.get("errors",
-                                                    "dir_does_not_exist")
-        confirm_overwrite = self.resources_obj.get("messages",
-                                                   "confirm_overwrite")
-        legal_affirmatives = self.resources_obj.get("legal_chars",
-                                                    "legal_affirmatives")
+        does_not_exist = self.resources_obj.get(
+            "errors",
+            "does_not_exist")
+        confirm_overwrite = self.resources_obj.get(
+            "messages",
+            "confirm_overwrite")
+        legal_affirmatives = self.resources_obj.get(
+            "legal_chars",
+            "legal_affirmatives")
 
         # Check to see if we are going to overwrite
         if os.path.exists(response):
@@ -552,7 +556,7 @@ class FileOutUI(UI):
         # Make sure the parent path exists
         base_name = os.path.split(response)[0]
         if not os.path.exists(os.path.join(base_name, os.pardir)):
-            msg = "\n" + error_prefix + response + dir_does_not_exist + "\n"
+            msg = does_not_exist.format(file_name=base_name) + "\n"
             lib.display_error(msg)
             return False
 
