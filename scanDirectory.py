@@ -98,7 +98,13 @@ class ScanDirectory(object):
 
                 # Get the path and file size of the current file.
                 file_path = os.path.join(root, file_name)
-                file_size = os.path.getsize(file_path)
+
+                try:
+                    file_size = os.path.getsize(file_path)
+                except FileNotFoundError:
+                    # TODO: Log this in the errors log (Needs to be passed
+                    # TODO: to this object first
+                    continue
 
                 # If we are to skip zero files and the file size is less than 0,
                 # then continue
