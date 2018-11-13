@@ -17,12 +17,14 @@ from ui import TrueFalseUI
 OPTIONS_SETTINGS = {
     "interactive":
         ("-i", "--interactive", "store_true", False, None),
+    "advanced":
+        ("-a", "--advanced", "store_true", False, None),
     "language":
         ("", "--language", "store", "english", "string"),
     "use_preset":
         ("-P", "--use-preset", "store_true", False, None),
     "save_preset":
-        ("-w", "--save-preset", "store_true", False, None),
+        ("-w", "--save-preset", "store", "", "string"),
     "compare_two_files":
         ("-c", "--compare-two", "store_true", False, None),
     "source_dir":
@@ -137,21 +139,25 @@ def create_error_log(file_name):
     cannot_create_log = resources_obj.get("errors", "cannot_create_log")
     source = resources_obj.get("words", "source")
     target = resources_obj.get("words", "target")
+    headers = resources_obj.get("headers", "error_file").replace(r"\t", "\t")
 
-    lib.display_message(creating_log.format(log_file=file_name,
-                                            time_now=time.strftime("%I:%M:%S")))
+    lib.display_message(
+        lib.format_string(creating_log.format(
+            log_file=file_name,
+            time_now=time.strftime("%I:%M:%S"))))
     lib.display_message("-" * 80)
 
     try:
         errors_file = open(file_name + ".errors", "w")
     except (OSError, IOError):
-        lib.display_error(cannot_create_log.format(log_file=file_name))
+        lib.display_error(
+            lib.format_string(cannot_create_log.format(log_file=file_name)))
         sys.exit(1)
 
-    errors_file.write(resources_obj.get("log_errors", "description"))
+    errors_file.write(headers)
 
-    errors_file.write(source + "\t" + options.sourceDir + "\n")
-    errors_file.write(target + "\t" + options.targetDir + "\n")
+    errors_file.write(source + "\t" + settings.source_dir + "\n")
+    errors_file.write(target + "\t" + settings.target_dir + "\n")
 
     return errors_file
 
@@ -168,9 +174,12 @@ def create_duplicates_log(file_name):
 
     creating_log = resources_obj.get("messages", "creating_dup_log")
     error = resources_obj.get("errors", "cannot_create_log")
+    headers = resources_obj.get("headers", "log_file").replace(r"\t", "\t")
 
-    lib.display_message(creating_log.format(log_file=file_name,
-                                            time_now=time.strftime("%I:%M:%S")))
+    lib.display_message(
+        lib.format_string(creating_log.format(
+            log_file=file_name,
+            time_now=time.strftime("%I:%M:%S"))))
     lib.display_message("-" * 80)
 
     try:
@@ -179,7 +188,7 @@ def create_duplicates_log(file_name):
         lib.display_error(error)
         sys.exit(1)
 
-    results_file.write(resources_obj.get("headers", "log_file"))
+    results_file.write(headers)
 
     return results_file
 
@@ -324,187 +333,6 @@ def load_defaults_from_options():
     output["debug_limit"] = options.debug_limit
 
     return output
-#
-#
-# # ------------------------------------------------------------------------------
-# def build_source_list():
-#     """
-#     Reads in all the files and builds a list of the source directory.
-#
-#     :return: A list of the source files.
-#     """
-#
-#     # Build the resource strings
-#     building_src_list = resources_obj.get("messages", "building_src_list")
-#     scanned_so_far = resources_obj.get("messages", "scanned_so_far")
-#     unable_to_get_size = resources_obj.get("errors", "unable_to_get_size")
-#     added = resources_obj.get("words", "added")
-#     files = resources_obj.get("words", "files")
-#     scanned = resources_obj.get("words", "scanned")
-#     of = resources_obj.get("words", "of")
-#     at = resources_obj.get("words", "at")
-#
-#     # initialize counters and list
-#     checked_counter = 0
-#     actual_counter = 0
-#     output = list()
-#
-#     # Print status
-#     time_now = time.strftime("%I:%M:%S")
-#     lib.display_message("\n\n" + building_src_list + " " + time_now + ".")
-#     lib.display_message("-" * 80)
-#
-#     # Step through each of the files in the source
-#     for root, sub_folders, files in os.walk(settings.source_dir):
-#
-#         for file_name in files:
-#
-#             # Increment the number of files checked
-#             checked_counter += 1
-#
-#             # Update the status every 1000 files
-#             if checked_counter % 1000 == 0:
-#
-#                 # Print the status, flush the buffer, and rest to the beginning
-#                 message = str(checked_counter) + scanned_so_far
-#                 sys.stdout.write(message)
-#                 sys.stdout.flush()
-#                 sys.stdout.write("\b" * (len(message)))
-#
-#             # Skip any files that are hidden if so directed.
-#             if settings.skip_hidden and file_name[0] == ".":
-#                 continue
-#
-#             # Skip .DSStore files if so directed.
-#             if settings.skip_dsstore and file_name == ".DS_Store":
-#                 continue
-#
-#             # Skip files if they are not specific file types if so directed.
-#             ext = os.path.splitext(file_name)[1].upper().replace(".", "")
-#             if settings.limit_to_patterns and ext not in settings.pattern_list:
-#                 continue
-#
-#             # Get the path and file size of the current file.
-#             file_path = os.path.join(root, file_name)
-#             try:
-#                 file_size = os.path.getsize(file_path)
-#             except Exception:
-#                 file_size = -1
-#                 errors_log.write(unable_to_get_size + " " + file_path + "\n")
-#
-#             # If we are to skip zero files and the file size is less than 0,
-#             # then continue
-#             if settings.skip_zero_len and file_size < 1:
-#                 continue
-#
-#             # Increment the counter of added files
-#             actual_counter += 1
-#
-#             # Append the file
-#             output.append([file_name, file_path, file_size])
-#
-#     source_file_count = actual_counter
-#     msg = added + " " + str(actual_counter) + " " + files + " " + of + " "
-#     msg += str(checked_counter) + " " + scanned + " " + at + " "
-#     msg += time.strftime("%I:%M:%S") + "."
-#     lib.display_message(msg)
-#
-#     return output
-#
-#
-# # ------------------------------------------------------------------------------
-# def build_target_dict():
-#     """
-#     Reads all of the files in the target directory and builds a list
-#
-#     :return: A dictionary of the files in the target directory.
-#     """
-#
-#     # Build the resource strings
-#     building_tgt_list = resources_obj.get("messages", "building_tgt_list")
-#     scanned_so_far = resources_obj.get("messages", "scanned_so_far")
-#     unable_to_get_size = resources_obj.get("errors", "unable_to_get_size")
-#     added = resources_obj.get("words", "added")
-#     files = resources_obj.get("words", "files")
-#     scanned = resources_obj.get("words", "scanned")
-#     of = resources_obj.get("words", "of")
-#     at = resources_obj.get("words", "at")
-#
-#     # Initialize counters and dict
-#     checked_counter = 0
-#     actual_counter = 0
-#     target_dirs = dict()
-#
-#     # Print status
-#     time_now = time.strftime("%I:%M:%S")
-#     lib.display_message("\n\n" + building_tgt_list + " " + time_now + ".")
-#     lib.display_message("-" * 80)
-#
-#     # Step through each of the files in the target
-#     for root, sub_folders, files in os.walk(settings.target_dir):
-#
-#         for file_name in files:
-#
-#             # Increment the number of files checked
-#             checked_counter += 1
-#
-#             # Update the status every 1000 files
-#             if checked_counter % 1000 == 0:
-#
-#                 # Print the status, flush the buffer, and rest to the beginning
-#                 message = str(checked_counter) + scanned_so_far
-#                 sys.stdout.write(message)
-#                 sys.stdout.flush()
-#                 sys.stdout.write("\b" * (len(message)))
-#
-#             # Skip any files that are hidden if so directed.
-#             if settings.skip_hidden and file_name[0] == ".":
-#                 continue
-#
-#             # Skip .DSStore files if so directed.
-#             if settings.skip_dsstore and file_name == ".DS_Store":
-#                 continue
-#
-#             # Skip files if they are not specific file types if so directed.
-#             ext = os.path.splitext(file_name)[1].upper().replace(".", "")
-#             if settings.limit_to_patterns and ext not in settings.pattern_list:
-#                 continue
-#
-#             # Get the path and file size of the current file.
-#             file_path = os.path.join(root, file_name)
-#             try:
-#                 file_size = os.path.getsize(file_path)
-#             except Exception:
-#                 file_size = -1
-#                 errors_log.write(unable_to_get_size + " " + file_path + "\n")
-#
-#             # If we are to skip zero files and the file size is less than 0,
-#             # then continue
-#             if settings.skip_zero_len and file_size < 1:
-#                 continue
-#
-#             # Increment the counter of added files and append this file
-#             actual_counter += 1
-#
-#             # Is this the first time we see a file of this size?
-#             if not(target_dirs.has_key(file_size)):
-#                 # if so, create a new list of the full path and checksum value
-#                 target_dirs[file_size] = [[file_path, file_size]]
-#
-#             # Otherwise we have seen this file size before, so append the full
-#             # path and checksum to the existing size item in the dictionary
-#             else:
-#                 temp_data = target_dirs[file_size]
-#                 temp_data.append([file_path, file_size])
-#                 target_dirs[file_size] = temp_data
-#
-#     targetFileCount = actual_counter
-#     msg = added + " " + str(actual_counter) + " " + files + " " + of + " "
-#     msg += str(checked_counter) + " " + scanned + " " + at + " "
-#     msg += time.strftime("%I:%M:%S") + "."
-#     lib.display_message(msg)
-#
-#     return target_dirs
 
 
 # ------------------------------------------------------------------------------
@@ -581,130 +409,126 @@ def do_compare(source, target):
     """
     Actually run the compare.
 
-    :param source: The source scan object. The target scan object.
+    :param source: The source scan object.
+    :param target: The target scan object.
 
     :return: Nothing.
     """
 
     is_symlink = False
-    #
-    # # preset some counters and flags
-    # counter = 0
-    # old_percent = 0
-    # num_duplicates = 0
-    # num_total_duplicates = 0
+
+    # preset some counters and flags
+    counter = 0
+    old_percent = 0
+    num_duplicates = 0
+    num_total_duplicates = 0
     # num_unique = 0
     # num_symlinks = 0
     # num_errors = 0
-    #
-    # # make a list that will store each matched file so that it is not visited
-    # # twice. i.e. if we find that A=B, we do not later want to record that B=A
-    # # this is really only an issue if the source and target directory are the
-    # # same.
-    # visited_files = list()
-    #
-    # # test each source file
-    # for source_file_path in source.items.keys():
-    #
-    #     # print the progress bar
-    #     counter += 1
-    #     old_percent = lib.display_progress(counter, len(source.items),
-    #                                        old_percent, 50, "#", "-")
-    #
-    #     source_file_name = source.items[source_file_path][0]
-    #     source_file_size = source.items[source_file_path][1]
-    #
-    #     # do not test files that have already been identified as matches for
-    #     # other files (only happens if both source and target dirs are the same)
-    #     if source.scan_dir == target.scan_dir:
-    #         if source_file_path in visited_files:
-    #             continue
-    #
-    #     # preset the log file lists and the unique flag
-    #     duplicate_list = list()
-    #     error_list = list()
-    #     # unique = False
-    #
-    #     # check to see if any files in the target dir have the same size as the
-    #     # file we are testing.
-    #     try:
-    #         possible_matches_list = target.items[source_file_size]
-    #         # matched_size = True
-    #     except KeyError:
-    #         possible_matches_list = list()
-    #         # matched_size = False
-    #
-    #     # Check each possible match
-    #     for possibleMatch in possible_matches_list:
-    #
-    #         match_file_path = possibleMatch[0]
-    #         match_file_size = possibleMatch[1]
-    #
-    #         # Don't match against yourself
-    #         if source_file_path == match_file_path:
-    #             continue
-    #
-    #         # Since the file sizes match, compare the two files
-    #         match = compare_two_files(source_file_path, match_file_path,
-    #                                   settings.many_dupes)
-    #
-    #         # If a match, store this file in the duplicate_list
-    #         if match:
-    #             duplicate_list.append([match_file_path,
-    #                                   str(match_file_size),
-    #                                   str(is_symlink)])
-    #         #
-    #         # # if nothing matches, this is a unique file
-    #         # if not(match) and not(matched_size):# and not(nameMatch):
-    #         #     unique = True
-    #
-    #         # If we are listing A=B, don't also later list B=A if we already
-    #         # found a match.
-    #         if options.sourceDir == options.targetDir and match:
-    #             visited_files.append(match_file_path)
-    #
-    #
-    #
-    #     # update the counts
-    #     if duplicate_list:
-    #         num_duplicates += 1
-    #         num_total_duplicates = num_total_duplicates + len(duplicate_list)
-    #     # if unique or not possible_matches_list: num_unique = num_unique + 1
-    #     # if error_list: num_errors = num_errors + 1
-    #
-    #
-    #
-    #     # write the resutls to the log file (regardless of match outcome)
-    #     resultsLog.write("RESULT\t")
-    #     resultsLog.write("\t")
-    #     if len(duplicate_list) > 0:
-    #         resultsLog.write("DUPLICATE\t")
-    #     else:
-    #         resultsLog.write("UNIQUE\t")
-    #     # sourceFullPath = os.path.join(options.sourceDir, source_file_name)
-    #     resultsLog.write(sourceFilePath + "\t")
-    #     # resultsLog.write(sourceFilePath.replace(options.sourceDir,"").lstrip("/") + "\t")
-    #     resultsLog.write(str(source_file_size) + "\t")
-    #     resultsLog.write(str(is_symlink) + "\t")
-    #     for my_item in duplicate_list:
-    #         resultsLog.write(my_item[0] + "\t")
-    #         resultsLog.write(my_item[1] + "\t")
-    #         resultsLog.write(my_item[2] + "\t")
-    #     resultsLog.write("\n")
-    #
-    #
-    #
-    #     # write the errors to the errors log file (if there are any)
-    #     if error_list:
-    #         errorsLog.write("Error comparing\t")
-    #         errorsLog.write(source_file_name + "\t")
-    #         errorsLog.write(sourceFilePath.replace(options.sourceDir,"").lstrip("/") + "\t")
-    #         errorsLog.write(str(source_file_size) + "\t")
-    #         for my_item in error_list:
-    #             errorsLog.write(my_item[0] + "\t")
-    #             errorsLog.write(my_item[1] + "\t")
-    #             errorsLog.write(my_item[2] + "\t")
-    #         errorsLog.write("\n")
+
+    # make a list that will store each matched file so that it is not visited
+    # twice. i.e. if we find that A=B, we do not later want to record that B=A.
+    # This is really only an issue if the source and target directory are the
+    # same.
+    visited_files = list()
+
+    # test each source file
+    for source_file_path in source.items.keys():
+
+        # print the progress bar
+        counter += 1
+        old_percent = lib.display_progress(counter, len(source.items),
+                                           old_percent, 50, "#", "-")
+
+        source_file_name = source.items[source_file_path][0]
+        source_file_size = source.items[source_file_path][1]
+
+        # do not test files that have already been identified as matches for
+        # other files (only happens if both source and target dirs are the same)
+        if source.scan_dir == target.scan_dir:
+            if source_file_path in visited_files:
+                continue
+
+        # preset the log file lists and the unique flag
+        duplicate_list = list()
+        error_list = list()
+        # unique = False
+
+        # check to see if any files in the target dir have the same size as the
+        # file we are testing.
+        try:
+            possible_matches_list = target.items[source_file_size]
+            # matched_size = True
+        except KeyError:
+            possible_matches_list = list()
+            # matched_size = False
+
+        # Check each possible match
+        for possibleMatch in possible_matches_list:
+
+            match_file_path = possibleMatch[0]
+            match_file_size = possibleMatch[1]
+
+            # Don't match against yourself
+            if source_file_path == match_file_path:
+                continue
+
+            # Since the file sizes match, compare the two files
+            match = compare_two_files(source_file_path, match_file_path,
+                                      settings.many_dupes)
+
+            # If a match, store this file in the duplicate_list
+            if match:
+                duplicate_list.append([match_file_path,
+                                      str(match_file_size),
+                                      str(is_symlink)])
+            #
+            # # if nothing matches, this is a unique file
+            # if not(match) and not(matched_size):# and not(nameMatch):
+            #     unique = True
+
+            # If we are listing A=B, don't also later list B=A if we already
+            # found a match.
+            if options.sourceDir == options.targetDir and match:
+                visited_files.append(match_file_path)
+
+        # update the counts
+        if duplicate_list:
+            num_duplicates += 1
+            num_total_duplicates = num_total_duplicates + len(duplicate_list)
+        # if unique or not possible_matches_list: num_unique = num_unique + 1
+        # if error_list: num_errors = num_errors + 1
+
+        # write the results to the log file (regardless of match outcome)
+        results_log.write("RESULT\t")
+        results_log.write("\t")
+        if len(duplicate_list) > 0:
+            results_log.write("DUPLICATE\t")
+        else:
+            results_log.write("UNIQUE\t")
+        # sourceFullPath = os.path.join(options.sourceDir, source_file_name)
+        results_log.write(source_file_path + "\t")
+        results_log.write(str(source_file_size) + "\t")
+        results_log.write(str(is_symlink) + "\t")
+        for my_item in duplicate_list:
+            results_log.write(my_item[0] + "\t")
+            results_log.write(my_item[1] + "\t")
+            results_log.write(my_item[2] + "\t")
+        results_log.write("\n")
+
+        # write the errors to the errors log file (if there are any)
+        if error_list:
+            errors_log.write("Error comparing\t")
+            errors_log.write(source_file_name + "\t")
+            errors_log.write(
+                source_file_path.replace(options.sourceDir, "").lstrip("/") +
+                "\t")
+            errors_log.write(str(source_file_size) + "\t")
+            for my_item in error_list:
+                errors_log.write(my_item[0] + "\t")
+                errors_log.write(my_item[1] + "\t")
+                errors_log.write(my_item[2] + "\t")
+            errors_log.write("\n")
 
 
 # ------------------------------------------------------------------------------
@@ -762,7 +586,7 @@ def verify_preset():
     Check to see if a preset is to be saved, and verify overwrite if it already
     exists.
 
-    :return: A preset object if it is verfied, or None otherwise.
+    :return: A preset object if it is verified, or None otherwise.
     """
 
     # If they want to write out the settings to a preset file, verify that now
@@ -837,9 +661,6 @@ if __name__ == "__main__":
     verify_compare()
 
     # If they want to load from a preset, load the preset into the defaults.
-    # Otherwise: If we are running interactively, load the actual, built-in
-    # defaults. If we are NOT running interactively, load the options passed
-    # on the command line.
     if options.use_preset:
 
         # There should be exactly 2 items left in the args
@@ -850,8 +671,10 @@ if __name__ == "__main__":
 
         defaults = load_defaults_from_preset(sys.argv[1])
 
+    # Not loading a preset
     else:
 
+        # We are running interactively
         if options.interactive:
 
             # There should be exactly 1 item left in the args
@@ -860,21 +683,45 @@ if __name__ == "__main__":
                                                     "incorrect_num_args"))
                 sys.exit(1)
 
-            defaults = dict()
-            for key in OPTIONS_SETTINGS:
-                defaults[key] = OPTIONS_SETTINGS[key][3]
+            # Try to load the defaults from the automatically saved preset file
+            preset_path = "~/.findDuplicates/last_run.preset"
+            preset_path = os.path.expanduser(preset_path)
+            if os.path.exists(preset_path):
+                defaults = load_defaults_from_preset(
+                    os.path.expanduser(preset_path))
+
+            # Otherwise, load the actual default values as defined by the app
+            else:
+                defaults = dict()
+                for key in OPTIONS_SETTINGS:
+                    defaults[key] = OPTIONS_SETTINGS[key][3]
+
+        # We are not running interactively
         else:
+
+            # So set the defaults to match the command line options passed.
             defaults = load_defaults_from_options()
 
     # Create a new settings object
-    settings = Settings(resources_obj, defaults)
+    settings = Settings(resources_obj, defaults, options.advanced)
 
     # If options interactive is true, fill the settings object interactively.
     if options.interactive:
         settings.run_wizard()
 
+    # Always save a preset to ~/.findDuplicates/last_run.preset
+    preset_path = os.path.expanduser("~/.findDuplicates/last_run.preset")
+    settings.write_preset(preset_path)
+
+    # If the user wants to save a specific preset, also save that
+    if options.save_preset != "":
+        preset_path = os.path.expanduser(options.save_preset)
+        settings.write_preset(preset_path)
+
     # Create the log files
-    results_log, errors_log = create_duplicates_log(settings.log_file)
+    lib.display_message("\n\n\n\n")
+    results_log = create_duplicates_log(settings.log_file)
+    errors_log = create_error_log(settings.log_file)
 
     # Build the source list
     source_obj = ScanDirectory(
@@ -887,6 +734,7 @@ if __name__ == "__main__":
         resources_obj,
         True,
     )
+    source_obj.scan()
 
     # Build the target list
     target_obj = ScanDirectory(
@@ -899,33 +747,24 @@ if __name__ == "__main__":
         resources_obj,
         True,
     )
+    target_obj.scan()
 
     # Display a status to the user
     status_msg = resources_obj.get("messages", "start_comparing")
-    lib.display_message(status_msg).format(
+    status_msg = status_msg.format(
         source_count=source_obj.get_count(),
         source_dir=source_obj.scan_dir,
         target_count=target_obj.get_count(),
         target_dir=target_obj.scan_dir,
         start_time=time.strftime("%I:%M:%S"),
     )
+    lib.display_message(lib.format_string(status_msg))
     lib.display_message("-" * 80)
 
     # Do the actual comparison
-    #do_compare(source_obj, target_obj)
+    do_compare(source_obj, target_obj)
 
-
-
-    #
-    # # Compare each of the Source Dir files to the Target Dir files
-    # # --------------------------------------------------------------------------------------------------
-    # print("\n\nComparing " + str(sourceFileCount) + " source files (in: " + options.sourceDir + ")")
-    # print("       to " +  str(targetFileCount) + " target files (in: " + options.targetDir + ")")
-    # print("       at " + time.strftime("%I:%M:%S") + ".")
-    # print("------------------------------------------------------------------------------------------")
-    #
-    # # Do the compare
-    # do_compare()
+    print("\n\n\nDONE")
     #
     # # clean up
     # # --------------------------------------------------------------------------------------------------
