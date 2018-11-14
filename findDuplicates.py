@@ -9,6 +9,7 @@ import time
 from optparse import OptionParser
 
 import lib
+from debug import Debug
 from scanDirectory import ScanDirectory
 from settings import Settings
 from ui import TrueFalseUI
@@ -299,7 +300,12 @@ def load_defaults_from_preset(preset_file):
     output = dict()
     preset_items = preset_obj.items("presets")
     for item in preset_items:
-        output[item[0]] = item[1]
+        if item[1].upper() == "TRUE":
+            output[item[0]] = True
+        elif item[1].upper() == "FALSE":
+            output[item[0]] = False
+        else:
+            output[item[0]] = item[1]
     return output
 
 
@@ -412,7 +418,9 @@ def do_compare(source, target):
     :param source: The source scan object.
     :param target: The target scan object.
 
-    :return: Nothing.
+    :return: A tuple where the first item is the number of source files that
+             have duplicates, and the second is the total number of duplicates
+             found in the target dir.
     """
 
     is_symlink = False
@@ -421,7 +429,7 @@ def do_compare(source, target):
     counter = 0
     old_percent = 0
     num_duplicates = 0
-    num_total_duplicates = 0
+    num_source_files_with_duplicates = 0
     # num_unique = 0
     # num_symlinks = 0
     # num_errors = 0
@@ -435,6 +443,8 @@ def do_compare(source, target):
     # test each source file
     for source_file_path in source.items.keys():
 
+        source_has_dup = False
+
         # print the progress bar
         counter += 1
         old_percent = lib.display_progress(counter, len(source.items),
@@ -443,10 +453,18 @@ def do_compare(source, target):
         source_file_name = source.items[source_file_path][0]
         source_file_size = source.items[source_file_path][1]
 
+        # DEBUG
+        debug_obj.debug("\n\n\nChecking the following file:")
+        debug_obj.debug("    source_file_name = ", source_file_path)
+        debug_obj.debug("    source_file_size = ", source_file_size)
+
         # do not test files that have already been identified as matches for
         # other files (only happens if both source and target dirs are the same)
         if source.scan_dir == target.scan_dir:
             if source_file_path in visited_files:
+
+                # DEBUG
+                debug_obj.debug("This file was in 'visited_files'. Skipping.")
                 continue
 
         # preset the log file lists and the unique flag
@@ -458,6 +476,7 @@ def do_compare(source, target):
         # file we are testing.
         try:
             possible_matches_list = target.items[source_file_size]
+
             # matched_size = True
         except KeyError:
             possible_matches_list = list()
@@ -469,8 +488,16 @@ def do_compare(source, target):
             match_file_path = possibleMatch[0]
             match_file_size = possibleMatch[1]
 
+            # DEBUG
+            debug_obj.debug("Comparing to the following file:")
+            debug_obj.debug("    match_file_path = ", match_file_path)
+            debug_obj.debug("    match_file_size = ", match_file_size)
+
             # Don't match against yourself
             if source_file_path == match_file_path:
+
+                # DEBUG
+                debug_obj.debug("Source and match are the same. Skipping.")
                 continue
 
             # Since the file sizes match, compare the two files
@@ -479,25 +506,30 @@ def do_compare(source, target):
 
             # If a match, store this file in the duplicate_list
             if match:
+
+                # DEBUG
+                debug_obj.debug("These files are duplicates.")
                 duplicate_list.append([match_file_path,
                                       str(match_file_size),
                                       str(is_symlink)])
-            #
-            # # if nothing matches, this is a unique file
-            # if not(match) and not(matched_size):# and not(nameMatch):
-            #     unique = True
+
+                num_duplicates += 1
+
+                source_has_dup = True
+
+            # if nothing matches, this is a unique file
+            else:
+
+                # DEBUG
+                debug_obj.debug("These files are not duplicates.")
 
             # If we are listing A=B, don't also later list B=A if we already
             # found a match.
-            if options.sourceDir == options.targetDir and match:
+            if source_file_path == match_file_path and match:
                 visited_files.append(match_file_path)
 
-        # update the counts
-        if duplicate_list:
-            num_duplicates += 1
-            num_total_duplicates = num_total_duplicates + len(duplicate_list)
-        # if unique or not possible_matches_list: num_unique = num_unique + 1
-        # if error_list: num_errors = num_errors + 1
+        if source_has_dup:
+            num_source_files_with_duplicates += 1
 
         # write the results to the log file (regardless of match outcome)
         results_log.write("RESULT\t")
@@ -529,6 +561,9 @@ def do_compare(source, target):
                 errors_log.write(my_item[1] + "\t")
                 errors_log.write(my_item[2] + "\t")
             errors_log.write("\n")
+
+    # Return the total number of duplicates found
+    return num_source_files_with_duplicates, num_duplicates
 
 
 # ------------------------------------------------------------------------------
@@ -649,10 +684,6 @@ if __name__ == "__main__":
 
     # Set up the option parser and process the command line options.
     options, sys.argv[1:] = define_options()
-    #
-    # # Initialize the debug object
-    # debug_obj = Debug(max_count=options.debug_limit, exit_on_max_count=True,
-    #                   write_to_file=True, write_to_stderr=True)
 
     # If they want to write out the settings to a preset file, verify that now
     preset_out_obj = verify_preset()
@@ -718,34 +749,54 @@ if __name__ == "__main__":
         preset_path = os.path.expanduser(options.save_preset)
         settings.write_preset(preset_path)
 
+    # Initialize the debug object
+    debug_obj = Debug(
+        do_debug=settings.do_debug,
+        resources_obj=resources_obj,
+        max_count=settings.debug_limit,
+        exit_on_max_count=True,
+        write_to_file=True,
+        write_to_stdout=False,
+        write_to_stderr=False)
+
     # Create the log files
     lib.display_message("\n\n\n\n")
     results_log = create_duplicates_log(settings.log_file)
     errors_log = create_error_log(settings.log_file)
 
+    # DEBUG
+    debug_obj.debug("\n\nScanning Source Dir: ", settings.source_dir)
+    debug_obj.debug("#"*60)
+
     # Build the source list
     source_obj = ScanDirectory(
-        settings.source_dir,
-        settings.skip_hidden,
-        settings.skip_dsstore,
-        settings.limit_to_patterns,
-        settings.pattern_list,
-        settings.skip_zero_len,
-        resources_obj,
-        True,
+        scan_dir=settings.source_dir,
+        resources_obj=resources_obj,
+        skip_hidden=settings.skip_hidden,
+        skip_dsstore=settings.skip_dsstore,
+        limit_to_patterns=settings.limit_to_patterns,
+        patterns=settings.pattern_list,
+        skip_zero_len=settings.skip_zero_len,
+        type_is_source=True,
+        debug_obj=debug_obj
     )
     source_obj.scan()
 
+    # DEBUG
+    debug_obj.debug("\n\nScanning Target Dir: ", settings.target_dir)
+    debug_obj.debug("#"*60)
+
     # Build the target list
     target_obj = ScanDirectory(
-        settings.target_dir,
-        settings.skip_hidden,
-        settings.skip_dsstore,
-        settings.limit_to_patterns,
-        settings.pattern_list,
-        settings.skip_zero_len,
-        resources_obj,
-        True,
+        scan_dir=settings.target_dir,
+        resources_obj=resources_obj,
+        skip_hidden=settings.skip_hidden,
+        skip_dsstore=settings.skip_dsstore,
+        limit_to_patterns=settings.limit_to_patterns,
+        patterns=settings.pattern_list,
+        skip_zero_len=settings.skip_zero_len,
+        type_is_source=False,
+        debug_obj=debug_obj
     )
     target_obj.scan()
 
@@ -762,36 +813,27 @@ if __name__ == "__main__":
     lib.display_message("-" * 80)
 
     # Do the actual comparison
-    do_compare(source_obj, target_obj)
+    lib.display_message("\n\n")
+    num_source_files_with_dupes, final_dup_count = do_compare(source_obj,
+                                                              target_obj)
 
-    print("\n\n\nDONE")
-    #
-    # # clean up
-    # # --------------------------------------------------------------------------------------------------
-    # resultsLog.close()
-    # errorsLog.close()
-    #
-    # # Print a summary
-    # # --------------------------------------------------------------------------------------------------
-    # print("\n")
-    # print("Operation Completed at " + time.strftime("%I:%M:%S") + ".")
-    # print()
-    # print("Comparing source directory: " + options.sourceDir)
-    # print("       to target directory: " + options.targetDir)
-    # print()
-    # print(str(sourceFileCount) + " source files were checked against " + str(targetFileCount),
-    #       " files in the target dir.")
-    # print(str(numDuplicates) + " source files had duplicates in the target dir (",
-    #       "these " + str(numDuplicates) + " files have " + str(numTotalDuplicates) + " matching files).")
-    # if options.sourceDir == options.targetDir:
-    #     print("Listing unique files disabled because source and target directories are the same.")
-    # else:
-    #     print(str(numUnique) + " source files were unique.")
-    # print(str(numSymlinks) + " source files were symbolic links.")
-    # print(str(numErrors) + " errors encountered.")
-    # print()
-    # print("For a detailed list of results, see the file: " + options.logFile)
-    # print("For a list of any error encounterd, see the file: " + options.logFile + ".errors")
-    #
+    # clean up
+    results_log.close()
+    errors_log.close()
+
+    summary = resources_obj.get("messages", "summary")
+    summary = summary.format(
+        time_now=time.strftime("%I:%M:%S"),
+        source_dir=settings.source_dir,
+        target_dir=settings.target_dir,
+        source_file_count=source_obj.get_count(),
+        target_file_count=target_obj.get_count(),
+        num_duplicates=num_source_files_with_dupes,
+        num_target_duplicates=final_dup_count,
+        log_file=results_log.name,
+        errors_file=errors_log.name
+    )
+    summary = lib.format_string(summary)
+    lib.display_message(summary)
 
 

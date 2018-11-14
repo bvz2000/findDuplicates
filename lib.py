@@ -51,22 +51,28 @@ def display_progress(count, total, old_percent, width=50, completed_char="#",
         return percent
 
     # build the completed and uncompleted portions of the progress bar
-    done_str = "{0}".format(completed_char * (int(round(percent / (100 / width), 0))))
-    empty_str = "{0}".format(empty_char * (width - (int(round(percent / (100 / width))))))
+    done_str = "{0}".format(completed_char *
+        (int(round(percent / (100 / width), 0))))
+    empty_str = "{0}".format(empty_char *
+        (width - (int(round(percent / (100 / width))))))
 
     # build the X out of Y text
-    count_str = " (" + str(count) + " of " + str(total) + ")"
+    count_str = " (" + BRIGHT_WHITE + str(count) + ENDC + " of " + \
+                BRIGHT_WHITE + str(total) + ENDC + ")"
 
     # build the percent string
-    percent_str = "{0}".format(" " * (3 - len(str(int(math.floor(percent)))))) + str(percent) + "%"
+    percent_str = "{0}".format(" " *
+        (4 - len(str(int(math.floor(percent)))))) + str(percent) + "%" + " "
 
     # build the complete string, and insert the percent
     progress_bar_str = "[" + done_str + empty_str + "]"
-    progress_left = progress_bar_str[
-                    :int((len(progress_bar_str) / 2) - math.floor(len(percent_str) / 2))]
-    progress_right = progress_bar_str[
-                     int((len(progress_bar_str) / 2) + math.ceil(len(percent_str) / 2)):]
-    progress_bar_str = progress_left + percent_str + progress_right
+    progress_left = progress_bar_str[:int((len(progress_bar_str) / 2) -
+                                     math.floor(len(percent_str) / 2)) + 2]
+    progress_right = progress_bar_str[int((len(progress_bar_str) / 2) +
+                                      math.ceil(len(percent_str) / 2)) + 2:]
+    progress_bar_str = progress_left
+    progress_bar_str += BRIGHT_YELLOW + percent_str + ENDC
+    progress_bar_str += progress_right
 
     # append the count string
     progress_bar_str += count_str

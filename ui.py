@@ -5,7 +5,6 @@ import sys
 import lib
 
 
-# TODO: Add an integer type
 # ==============================================================================
 class UI(object):
     """
@@ -791,10 +790,10 @@ class IntUI(UI):
         msg += lib.BRIGHT_BLUE
 
         if values:
-            msg += values[0] + "\n"
+            msg += str(values[0]) + "\n"
             for item in values[1:]:
                 msg += " " * padding
-                msg += item
+                msg += str(item)
                 msg += "\n"
             msg += lib.ENDC
 

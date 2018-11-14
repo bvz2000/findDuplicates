@@ -5,10 +5,11 @@ import os.path
 import lib
 
 from ui import DirUI
-from ui import TrueFalseUI
-from ui import MultiDirUI
 from ui import FileOutUI
+from ui import IntUI
+from ui import MultiDirUI
 from ui import MultipleFileTypes
+from ui import TrueFalseUI
 
 
 # ------------------------------------------------------------------------------
@@ -36,7 +37,7 @@ class Settings(object):
         if advanced:
             self.step_count = 17
         else:
-            self.step_count = 6
+            self.step_count = 4
 
         # Establish the legal set of affirmative responses
         self.legal_affirmatives = self.resources_obj.get("legal_chars",
@@ -202,23 +203,26 @@ class Settings(object):
             self.step_count,
             self.defaults["many_dupes"])
 
-        # Debug
-        current_step += 1
-        do_debug = self.get_do_debug(
-            current_step,
-            self.step_count,
-            self.defaults["do_debug"])
-        if do_debug:
+        # The following question will only be asked if advanced is true
+        if self.advanced:
+
+            # Debug
             current_step += 1
-            self.debug_limit = self.get_debug_limit(
+            self.do_debug = self.get_do_debug(
                 current_step,
                 self.step_count,
-                self.defaults["debug_limit"])
-        else:
-            current_step += 1
-            lib.display_message(
-                lib.format_string(
-                    skip_msg.format(step_no=current_step)))
+                self.defaults["do_debug"])
+            if self.do_debug:
+                current_step += 1
+                self.debug_limit = self.get_debug_limit(
+                    current_step,
+                    self.step_count,
+                    self.defaults["debug_limit"])
+            else:
+                current_step += 1
+                lib.display_message(
+                    lib.format_string(
+                        skip_msg.format(step_no=current_step)))
 
     # --------------------------------------------------------------------------
     def get_source_dir(self, step, step_count, default="~"):
@@ -503,8 +507,7 @@ class Settings(object):
         :return: An integer.
         """
 
-        # TODO: THis needs to get an integer, not a true false.
-        ui_obj = TrueFalseUI(
+        ui_obj = IntUI(
             self.resources_obj,
             "debug_limit",
             step,
